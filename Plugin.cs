@@ -4,7 +4,12 @@ using Cysharp.Threading.Tasks;
 using OpenMod.Unturned.Plugins;
 using OpenMod.API.Plugins;
 
-[assembly: PluginMetadata("Digicore.Unturned.Plugins.Teleport", DisplayName = "Digicore.Unturned.Plugins.Teleport", Author = "Digicore Labs", Website = "digicorelabs.com")]
+[assembly: PluginMetadata("Digicore.Unturned.Plugins.Teleport",
+    DisplayName = "Digicore.Unturned.Plugins.Teleport",
+    Author = "Digicore Labs",
+    Website = "digicorelabs.com"
+)]
+
 namespace Digicore.Unturned.Plugins.Teleport
 {
     public class Plugin : OpenModUnturnedPlugin
@@ -13,7 +18,8 @@ namespace Digicore.Unturned.Plugins.Teleport
 
         public Plugin(
             ILogger<Plugin> logger,
-            IServiceProvider serviceProvider) : base(serviceProvider)
+            IServiceProvider serviceProvider
+        ) : base(serviceProvider)
         {
             m_Logger = logger;
         }
