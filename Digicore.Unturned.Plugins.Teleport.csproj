@@ -32,6 +32,12 @@
     <EmbeddedResource Include="config.yaml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Events\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Events\" />
+  </ItemGroup>
   <Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
     <ItemGroup>
     </ItemGroup>

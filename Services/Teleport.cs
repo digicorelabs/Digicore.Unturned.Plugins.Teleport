@@ -1,25 +1,23 @@
-
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API.Ioc;
-using Digicore.Unturned.Plugins.Teleport.API;
 using OpenMod.Unturned.Users;
+using Digicore.Unturned.Plugins.Teleport.API;
 
-// TODO
 namespace Digicore.Unturned.Plugins.Teleport.Services
 {
 
     [PluginServiceImplementation(Lifetime = ServiceLifetime.Singleton)]
-    public class Service : ITeleport
+    public class Teleport : ITeleport
     {
-        private Dictionary<String, List<TELEPORTATION_USER_STATE>> TELEPORTATION_LEDGER = new Dictionary<String, List<TELEPORTATION_USER_STATE>>();
+        private readonly ILedger _ledger;
 
-        public class TELEPORTATION_USER_STATE
+        public Teleport(
+            ILedger ledger
+        )
         {
-            public UnturnedUser From { get; set; }
-            public UnturnedUser To { get; set; }
+            _ledger = ledger;
         }
 
         public Task Accept(
@@ -27,7 +25,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             UnturnedUser? userTo
         )
         {
-            if(userFrom is null || userTo is null) return Task.CompletedTask;
+            if (userFrom is null || userTo is null) return Task.CompletedTask;
 
             // IF PLAYER IS NULL THEN ACCEPT THE LAST TELEPORT REQUEST
 
@@ -44,7 +42,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             UnturnedUser? userTo
         )
         {
-            if(userFrom is null || userTo is null) return Task.CompletedTask;
+            if (userFrom is null || userTo is null) return Task.CompletedTask;
             // IF PLAYER IS NULL THEN DENY THE LAST TELEPORT REQUEST
 
             return Task.CompletedTask;
@@ -55,7 +53,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             UnturnedUser? userTo
         )
         {
-            if(userFrom is null || userTo is null) return Task.CompletedTask;
+            if (userFrom is null || userTo is null) return Task.CompletedTask;
             // IF PLAYER IS NULL THEN CANCEL THE LAST TELEPORT REQUEST
 
             return Task.CompletedTask;
@@ -67,13 +65,14 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
         )
         {
             // Request requires a user to teleport to.
-            if(userTo is not null) {
+            if (userTo is not null) {
                 await userFrom.PrintMessageAsync($"Teleport request sent to {userTo.DisplayName}.");
 
                 await userTo.PrintMessageAsync($"Teleport requested by {userFrom.DisplayName}.");
                 await userTo.PrintMessageAsync("tp (accept|deny)");
 
                 // REQUEST LOGIC
+                //_ledger.Request(userTo.Id, userFrom.Id);
             }
         }
     }

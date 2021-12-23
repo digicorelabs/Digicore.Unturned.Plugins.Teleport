@@ -1,7 +1,5 @@
-using System;
 using System.Threading.Tasks;
 using OpenMod.API.Ioc;
-using Microsoft.Extensions.DependencyInjection;
 using OpenMod.Unturned.Users;
 
 namespace Digicore.Unturned.Plugins.Teleport.API
