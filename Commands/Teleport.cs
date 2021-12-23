@@ -21,8 +21,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
     [Command("tp")]
     public class Command : UnturnedCommand
     {
-        private readonly ILogger<Command> m_Logger;
-        private readonly IUnturnedUserDirectory m_UnturnedUserDirectory;
+        private readonly ILogger<Command> _logger;
+        private readonly IUnturnedUserDirectory _unturnedUserDirectory;
         private readonly ITeleport _teleport;
 
         private string ACTION_ACCEPT = "accept";
@@ -38,8 +38,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             ITeleport teleport,
             IUnturnedUserDirectory unturnedUserDirectory
         ) : base(serviceProvider) {
-            m_UnturnedUserDirectory = unturnedUserDirectory;
-            m_Logger = logger;
+            _unturnedUserDirectory = unturnedUserDirectory;
+            _logger = logger;
             _teleport = teleport;
         }
 
@@ -52,7 +52,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             List<UnturnedUser> matches = new List<UnturnedUser>();
 
             var nameToMatchOn = playerName.ToLower();
-            var users = m_UnturnedUserDirectory.GetOnlineUsers();
+            var users = _unturnedUserDirectory.GetOnlineUsers();
 
             foreach (var user in users)
             {
@@ -106,7 +106,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             var firstParameter = await Context.Parameters.GetAsync<string>(0);
 
             UnturnedUser? userByFirstParameter = FindPlayerByPlayerName(firstParameter);
-            UnturnedUser userFrom = m_UnturnedUserDirectory.FindUser(Context.Actor.Id, UserSearchMode.FindById);
+            UnturnedUser? userFrom = _unturnedUserDirectory.FindUser(Context.Actor.Id, UserSearchMode.FindById);
 
             // Check if the first parameter is a player.
             if(userByFirstParameter != null) {

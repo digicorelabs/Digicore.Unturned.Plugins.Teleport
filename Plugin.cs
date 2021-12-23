@@ -14,19 +14,19 @@ namespace Digicore.Unturned.Plugins.Teleport
 {
     public class Plugin : OpenModUnturnedPlugin
     {
-        private readonly ILogger<Plugin> m_Logger;
+        private readonly ILogger<Plugin> _logger;
 
         public Plugin(
             ILogger<Plugin> logger,
             IServiceProvider serviceProvider
         ) : base(serviceProvider)
         {
-            m_Logger = logger;
+            _logger = logger;
         }
 
         protected override UniTask OnLoadAsync()
         {
-            m_Logger.LogInformation("[Digicore.Unturned.Plugins.Teleport] MESSAGE: TPA has loaded.");
+            _logger.LogInformation("[Digicore.Unturned.Plugins.Teleport] MESSAGE: TPA has loaded.");
 
             return UniTask.CompletedTask;
         }

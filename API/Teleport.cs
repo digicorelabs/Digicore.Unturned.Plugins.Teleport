@@ -20,7 +20,7 @@ namespace Digicore.Unturned.Plugins.Teleport.API
             UnturnedUser? userTo
         );
         Task Request(
-            UnturnedUser userFrom,
+            UnturnedUser? userFrom,
             UnturnedUser? userTo
         );
     }

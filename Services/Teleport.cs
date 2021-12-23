@@ -60,19 +60,31 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
         }
 
         public async Task Request(
-            UnturnedUser userFrom,
+            UnturnedUser? userFrom,
             UnturnedUser? userTo
         )
         {
             // Request requires a user to teleport to.
-            if (userTo is not null) {
+            if (
+                userTo is not null &&
+                userFrom is not null
+            )
+            {
                 await userFrom.PrintMessageAsync($"Teleport request sent to {userTo.DisplayName}.");
 
                 await userTo.PrintMessageAsync($"Teleport requested by {userFrom.DisplayName}.");
                 await userTo.PrintMessageAsync("tp (accept|deny)");
 
-                // REQUEST LOGIC
-                //_ledger.Request(userTo.Id, userFrom.Id);
+                var data = new ILedger.Data()
+                {
+                    to = userTo,
+                    from = userFrom,
+                    timestamp = DateTime.UtcNow
+                };
+
+                var id = userTo.SteamId.ToString();
+
+                await _ledger.Request(id, data);
             }
         }
     }
