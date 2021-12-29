@@ -19,6 +19,7 @@ using Digicore.Unturned.Plugins.Teleport.API;
 namespace Digicore.Unturned.Plugins.Teleport.Commands
 {
     [Command("tp")]
+    [CommandAlias("tpa")]
     public class Command : UnturnedCommand
     {
         private readonly ILogger<Command> _logger;
@@ -121,17 +122,27 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 * If the second parameter is a player, then the action correspond to target player.
                 **/
 
-                var secondParameter = await Context.Parameters.GetAsync<string>(1) ?? null;
+                _logger.LogInformation("[Digicore/Accept] here: 1");
+
+                var secondParameter = Context.Parameters.Length > 1 ? await Context.Parameters.GetAsync<string>(1) : null;
+
+                _logger.LogInformation("[Digicore/Accept] here: 2");
 
                 UnturnedUser? userBySecondParameter =  FindPlayerByPlayerName(secondParameter);
+
+                _logger.LogInformation("[Digicore/Accept] here: 3");
 
                 if(
                     IsActionAccept(firstParameter)
                 ) {
+                    _logger.LogInformation("[Digicore/Accept] here: 4");
+
                     await _teleport.Accept(
                         userFrom,
                         userBySecondParameter
                     );
+
+                    _logger.LogInformation("[Digicore/Accept] here: last");
                 } else if(
                     IsActionDeny(firstParameter)
                 ) {

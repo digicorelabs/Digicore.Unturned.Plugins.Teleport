@@ -7,20 +7,21 @@ namespace Digicore.Unturned.Plugins.Teleport.Events
 {
     public class UnturnedPlayerConnectedEventListener : IEventListener<UnturnedPlayerConnectedEvent>
     {
-        private readonly ILedger _ledger;
+        private ITeleport _teleport;
 
         public UnturnedPlayerConnectedEventListener(
-            ILedger ledger
-        )
-        {
-            _ledger = ledger;
+            ITeleport teleport
+        ) {
+            _teleport = teleport;
         }
 
         public async Task HandleEventAsync(object? sender, UnturnedPlayerConnectedEvent @event)
         {
             var id = @event.Player.SteamId.ToString();
 
-            await _ledger.Add(id);
+            await Task.Run(() => {
+                _teleport.LedgerAdd(id);
+            });
         }
     }
 }
