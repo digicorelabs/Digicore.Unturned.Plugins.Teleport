@@ -44,7 +44,57 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             _teleport = teleport;
         }
 
-        private UnturnedUser? FindPlayerByPlayerName(string? playerName)
+        private async Task<UnturnedUser?> GetMatchFromMatches(
+            List<UnturnedUser> matches,
+            UnturnedUser userFrom
+        )
+        {
+            if(matches.Count == 1) return matches[0];
+
+            if(matches.Count > 1) {
+                var index = 1;
+                var userFromId = userFrom.SteamId.ToString();
+
+                await userFrom.PrintMessageAsync("[Digicore.Teleport] Multiple matches found, please select from the following.");
+
+                foreach (var match in matches)
+                {
+                    await userFrom.PrintMessageAsync($"[Digicore.Teleport] { index }) { match.DisplayName.ToString() }.");
+                    await _teleport.MatchAdd(userFromId, match);
+
+                    index++;
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<UnturnedUser?> FindPlayerByPlayerName(
+            string? playerName,
+            UnturnedUser userFrom
+        )
+        {
+            if(playerName == null) return null;
+
+            List<UnturnedUser> matches = new List<UnturnedUser>();
+
+            var nameToMatchOn = playerName.ToLower();
+            var users = _unturnedUserDirectory.GetOnlineUsers();
+
+            foreach (var user in users)
+            {
+                var username = user.DisplayName.ToLower();
+
+                if(username.Contains(nameToMatchOn)) matches.Add(user);
+            }
+
+            return await GetMatchFromMatches(matches, userFrom);
+        }
+
+        /*
+        private UnturnedUser? FindPlayerByPlayerName(
+            string? playerName
+        )
         {
             if(playerName == null) return null;
 
@@ -63,17 +113,18 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 if(username.Contains(nameToMatchOn)) matches.Add(user);
             }
 
-            if(match != null) {
-                return match;
-            } else if(matches.Count > 1) {
-                // TODO: SUPPORT MULTIPLE MATCHES.
-            } else if(matches.Count == 1) {
+            if(match != null) return match;
+
+            if(matches.Count == 1) {
                 // Did you mean this one match?
                 return matches[0];
+            } else if(matches.Count > 1) {
+                // HandleMatches(matches);
             }
 
             return null;
         }
+        */
 
         private bool IsActionAccept(string action)
         {
@@ -97,17 +148,35 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
 
         private string PrintCommandStructure()
         {
-            return "tp (player|accept|deny|cancel)";
+            return "[Digicore.Teleport] tp (player|accept|deny|cancel)";
         }
 
         protected async override UniTask OnExecuteAsync()
         {
             if(Context.Parameters.Length < 1 || Context.Parameters.Length > 2) await Context.Actor.PrintMessageAsync(PrintCommandStructure());
 
+            // Flow: Match check.
+
+            // TODO: Check for if player is TPing to a match first.
+            // var isRequestToTeleportToMatch = _teleport.GetMatches;
+            // await HandleMatches();
+
+            // if(isRequestToTeleportToMatch) return null;
+
+            // Flow: Normal operation.
+
             var firstParameter = await Context.Parameters.GetAsync<string>(0);
 
-            UnturnedUser? userByFirstParameter = FindPlayerByPlayerName(firstParameter);
-            UnturnedUser? userFrom = _unturnedUserDirectory.FindUser(Context.Actor.Id, UserSearchMode.FindById);
+            UnturnedUser? userFrom = _unturnedUserDirectory.FindUser(
+                Context.Actor.Id, UserSearchMode.FindById
+            );
+
+            if(userFrom is null) return null;
+
+            UnturnedUser? userByFirstParameter = FindPlayerByPlayerName(
+                firstParameter,
+                userFrom
+            ).Result;
 
             // Check if the first parameter is a player.
             if(userByFirstParameter != null) {
@@ -115,52 +184,61 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                     userFrom,
                     userByFirstParameter
                 );
+
+                return null;
+            }
+
             // First parameter is not a player, maybe a command?
-            } else if(IsAnAction(firstParameter)) {
+            if(IsAnAction(firstParameter)) {
                 /**
                 * Optional second parameter can be a player.
                 * If the second parameter is a player, then the action correspond to target player.
                 **/
 
-                _logger.LogInformation("[Digicore/Accept] here: 1");
-
                 var secondParameter = Context.Parameters.Length > 1 ? await Context.Parameters.GetAsync<string>(1) : null;
 
-                _logger.LogInformation("[Digicore/Accept] here: 2");
-
-                UnturnedUser? userBySecondParameter =  FindPlayerByPlayerName(secondParameter);
-
-                _logger.LogInformation("[Digicore/Accept] here: 3");
+                UnturnedUser? userBySecondParameter = FindPlayerByPlayerName(
+                    secondParameter,
+                    userFrom
+                ).Result;
 
                 if(
-                    IsActionAccept(firstParameter)
+                    Context.Parameters.Length > 1 &&
+                    userBySecondParameter is null
                 ) {
-                    _logger.LogInformation("[Digicore/Accept] here: 4");
+                    // In case the player searched for does not exist.
 
+                    _logger.LogInformation($"[Digicore] Player \"{ secondParameter }\" not found.");
+
+                    return null;
+                } 
+                // Either no player's name is passed as a parameter or it was and the the player's information was found and is being passed on.
+
+                if(IsActionAccept(firstParameter)) {
                     await _teleport.Accept(
                         userFrom,
                         userBySecondParameter
                     );
-
-                    _logger.LogInformation("[Digicore/Accept] here: last");
-                } else if(
-                    IsActionDeny(firstParameter)
-                ) {
+                } else if(IsActionDeny(firstParameter)) {
+                    // TODO: FINISH.
                     await _teleport.Deny(
                         userFrom,
                         userBySecondParameter
                     );
-                } else if(
-                    IsActionCancel(firstParameter)
-                ) {
+                } else if(IsActionCancel(firstParameter)) {
+                    // TODO: FINISH.
                     await _teleport.Cancel(
                         userFrom,
                         userBySecondParameter
                     );
                 }
-            } else {
-                await Context.Actor.PrintMessageAsync(PrintCommandStructure());
+
+                return null;
             }
+
+            await Context.Actor.PrintMessageAsync(PrintCommandStructure());
+
+            return null;
         }
     }
 }

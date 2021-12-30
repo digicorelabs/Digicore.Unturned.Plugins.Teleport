@@ -37,10 +37,19 @@ namespace Digicore.Unturned.Plugins.Teleport.API
             string id
         );
 
+        Task MatchAdd(
+            string id,
+            UnturnedUser match
+        );
+
+        Task MatchRemove(
+            string id
+        );
+
         class Player
         {
             public List<ITeleport.Player.Data>? requests;
-            public List<string>? matches;
+            public List<UnturnedUser>? matches;
 
             public class Data
             {

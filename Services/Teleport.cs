@@ -161,7 +161,11 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
                 _logger.LogInformation($"[Digicore/Teleport/Ledger] Request made for { userTo.DisplayName }");
 
                 // Prevent teleport to self.
-                if(userToId == userFromId) return;
+                if(userToId == userFromId) {
+                    await userFrom.PrintMessageAsync("[Digicore.Teleport] Teleporting to yourself doesn't make much sense.");
+
+                    return;
+                }
 
                 var player = _ledger[userToId];
                 var requests = player.requests;
@@ -186,10 +190,10 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
                     if (duplicate == false) {
                         _ledger[userToId]?.requests?.Add(data);
 
-                        await userFrom.PrintMessageAsync($"Teleport request sent to {userTo.DisplayName}.");
+                        await userFrom.PrintMessageAsync($"[Digicore.Teleport] Teleport request sent to {userTo.DisplayName}.");
 
-                        await userTo.PrintMessageAsync($"Teleport requested by {userFrom.DisplayName}.");
-                        await userTo.PrintMessageAsync("tp (accept|deny)");
+                        await userTo.PrintMessageAsync($"[Digicore.Teleport] Teleport requested by {userFrom.DisplayName}.");
+                        await userTo.PrintMessageAsync("[Digicore.Teleport] tp (accept|deny)");
 
                         _logger.LogInformation($"[Digicore/Teleport/Ledger] Request Count: {requests.Count}");
                     }
@@ -204,7 +208,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             ITeleport.Player player = new ITeleport.Player();
 
             player.requests = new List<ITeleport.Player.Data>();
-            player.matches = new List<string>();
+            player.matches = new List<UnturnedUser>();
 
             _ledger.Add(id, player);
 
@@ -220,6 +224,23 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             _ledger.Remove(id);
 
             _logger.LogInformation($"[Digicore/Teleport/Ledger] REMOVED: {id}");
+
+            return Task.CompletedTask;
+        }
+
+        public Task MatchAdd(
+            string id,
+            UnturnedUser match
+        ) {
+            _ledger[id]?.matches?.Add(match);
+
+            return Task.CompletedTask;
+        }
+
+        public Task MatchRemove(
+            string id
+        ) {
+            _ledger[id].matches = new List<UnturnedUser>();
 
             return Task.CompletedTask;
         }
