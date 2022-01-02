@@ -29,11 +29,9 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
         {
             if (collection is null) return null;
 
-            var count = collection.Count;
+            if (collection.Count == 1) return collection[0];
 
-            if (count == 1) return collection[0];
-
-            if (count > 1)
+            if (collection.Count > 1)
             {
                 ITeleport.Player.Data? target = null;
                 ITeleport.Player.Data? previous = null;
@@ -71,7 +69,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
 
             foreach (var request in collection)
             {
-                UnturnedUser userToMatchTargetOn = (UnturnedUser)typeof(ITeleport.Player.Data).GetField(propToMatchRequestTargetOn).GetValue(request);
+                var userToMatchTargetOn = (UnturnedUser)typeof(ITeleport.Player.Data).GetField(propToMatchRequestTargetOn).GetValue(request);
 
                 if (
                     userToMatchTargetOn is not null &&
@@ -270,7 +268,6 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
 
             // Track pending teleport requests on user who requested.
             _ledger[userFromId]?.pending?.Add(data);
-
 
             // Let the player know that the request has been made.
             if (
