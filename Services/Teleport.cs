@@ -200,6 +200,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
                 onSuccess
             );
         }
+
         public void Cancel(
             UnturnedUser userWhoCanceled,
             UnturnedUser? userToCancel
