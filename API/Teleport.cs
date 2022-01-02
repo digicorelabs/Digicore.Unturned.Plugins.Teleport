@@ -9,17 +9,38 @@ namespace Digicore.Unturned.Plugins.Teleport.API
     [Service]
     public interface ITeleport
     {
-        Task Accept(
+        void LedgerAdd(
+            string id
+        );
+
+        void LedgerRemove(
+            string id
+        );
+
+        void MatchAdd(
+            string id,
+            UnturnedUser match
+        );
+
+        void MatchRemove(
+            string id
+        );
+
+        List<UnturnedUser>? GetMatches(
+            string id
+        );
+
+        void Accept(
             UnturnedUser userFrom,
             UnturnedUser? userTo
         );
 
-        Task Deny(
+        void Deny(
             UnturnedUser userFrom,
             UnturnedUser? userTo
         );
 
-        Task Cancel(
+        void Cancel(
             UnturnedUser userFrom,
             UnturnedUser? userTo
         );
@@ -27,27 +48,6 @@ namespace Digicore.Unturned.Plugins.Teleport.API
         Task Request(
             UnturnedUser userFrom,
             UnturnedUser userTo
-        );
-
-        Task LedgerAdd(
-            string id
-        );
-
-        Task LedgerRemove(
-            string id
-        );
-
-        Task MatchAdd(
-            string id,
-            UnturnedUser match
-        );
-
-        Task MatchRemove(
-            string id
-        );
-
-        List<UnturnedUser>? GetMatches(
-            string id
         );
 
         class Player

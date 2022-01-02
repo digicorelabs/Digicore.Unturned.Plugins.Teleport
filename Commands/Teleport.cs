@@ -60,7 +60,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 foreach (var match in matches)
                 {
                     await userFrom.PrintMessageAsync($"{ index }) { match.DisplayName.ToString() }.");
-                    await _teleport.MatchAdd(userFromId, match);
+
+                    _teleport.MatchAdd(userFromId, match);
 
                     index++;
                 }
@@ -143,7 +144,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
 
             // Either no player's name is passed as a parameter or it was and the the player's information was found and is being passed on.
             if(IsActionAccept(firstParameter)) {
-                await _teleport.Accept(
+                _teleport.Accept(
                     userFrom,
                     userBySecondParameter
                 );
@@ -152,7 +153,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             }
 
             if(IsActionDeny(firstParameter)) {
-                await _teleport.Deny(
+                _teleport.Deny(
                     userFrom,
                     userBySecondParameter
                 );
@@ -160,9 +161,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 return;
             }
 
-            // TODO: FINISH.
             if(IsActionCancel(firstParameter)) {
-                await _teleport.Cancel(
+                _teleport.Cancel(
                     userFrom,
                     userBySecondParameter
                 );
@@ -199,14 +199,12 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
 
         private async Task HandleMatchRequest(
             int selection,
-            UnturnedUser? userFrom
+            UnturnedUser userFrom
         ) {
+            if(userFrom is null) return;
             if(selection <= 0) return;
 
-            var id = userFrom?.SteamId.ToString();
-
-            if(id is null) return;
-
+            var id = userFrom.SteamId.ToString();
             var index = selection - 1;
             var matches = _teleport.GetMatches(id);
 
@@ -221,7 +219,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 match
             );
 
-            await _teleport.MatchRemove(id);
+            _teleport.MatchRemove(id);
         }
 
         private async Task<string?> GetParameterAsString(
