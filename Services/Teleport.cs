@@ -23,25 +23,22 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             _logger = logger;
         }
 
-        private ITeleport.Player.Data? GetRequestByTimestamp(
-            UnturnedUser userFrom
+        private ITeleport.Player.Data? GetRequestLatest(
+            UnturnedUser userFrom,
+            List<ITeleport.Player.Data>? collection
         ) {
-            _logger.LogInformation("[Digicore/GetRequestByTimestamp]");
+            if(collection is null) return null;
 
-            ITeleport.Player.Data? target = null;
+            var count = collection?.Count;
 
-            var userFromId = userFrom.SteamId.ToString();
+            if(count == 1) return collection?[0];
 
-            var requests = _ledger[userFromId].requests;
-            var count = requests?.Count;
-
-            if(count == 1) {
-                target = requests?[0];
-            } else if(count > 1) {
+            if(count > 1) {
+                ITeleport.Player.Data? target = null;
                 ITeleport.Player.Data? previous = null;
 
-                if(requests is not null) {
-                    foreach (var request in requests) {
+                if(collection is not null) {
+                    foreach (var request in collection) {
                         if(
                             previous is not null &&
                             request.timestamp > previous.timestamp
@@ -50,35 +47,29 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
                         previous = request;
                     }
                 }
+
+                return target;
             }
 
-            _logger.LogInformation($"[Digicore/GetRequestByTimestamp] target: {target?.user?.DisplayName.ToString()}");
-
-            return target;
+            return null;
         }
 
-        private ITeleport.Player.Data? GetRequestByUser(
+        private ITeleport.Player.Data? GetRequest(
             UnturnedUser userFrom,
-            UnturnedUser userTo
+            UnturnedUser userTo,
+            List<ITeleport.Player.Data>? collection
         ) {
-            _logger.LogInformation("[Digicore/GetRequestByUser]");
+            if(collection is null) return null;
 
-            ITeleport.Player.Data? target = null;
+            ITeleport.Player.Data? data = null;
 
-            var userFromId = userFrom.SteamId.ToString();
             var userToId = userTo.SteamId.ToString();
 
-            var requests = _ledger[userFromId].requests;
-
-            if(requests is not null) {
-                foreach(var request in requests) {
-                    if(request?.user?.SteamId.ToString() == userToId) target = request;
-                }
+            foreach(var request in collection) {
+                if(request?.user?.SteamId.ToString() == userToId) data = request;
             }
 
-            _logger.LogInformation($"[Digicore/GetRequestByUser] target: {target?.user?.DisplayName.ToString()}");
-
-            return target;
+            return data;
         }
 
         public Task Accept(
@@ -88,30 +79,32 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
         {
             if (userFrom is null) return Task.CompletedTask;
 
-            _logger.LogInformation($"[Digicore/Accept] Accepting a request...");
-
-            _logger.LogInformation("[Digicore/Accept] here: 5");
+            var userFromId = userFrom.SteamId.ToString();
 
             ITeleport.Player.Data? request = userTo is not null ?
-                GetRequestByUser(userFrom, userTo) :
-                GetRequestByTimestamp(userFrom);
-
-            _logger.LogInformation("[Digicore/Accept] here: 6");
+                GetRequest(
+                    userFrom,
+                    userTo,
+                    _ledger[userFromId].requests
+                ) :
+                GetRequestLatest(
+                    userFrom,
+                    _ledger[userFromId].requests
+                );
 
             if(request is not null) {
-                var userFromId = userFrom.SteamId.ToString();
-                var user = request.user;
+                var target = request.userFrom;
 
-                if(user is not null) {
-                    _logger.LogInformation($"[Digicore/Accept] request: { user.DisplayName }");
+                if(target is null) return Task.CompletedTask;
 
-                    user.Player.Player.teleportToLocationUnsafe(
-                        userFrom.Player.Player.transform.position,
-                        userFrom.Player.Player.look.yaw
-                    );
-                }
+                target.Player.Player.teleportToLocationUnsafe(
+                    userFrom.Player.Player.transform.position,
+                    userFrom.Player.Player.look.yaw
+                );
 
                 _ledger[userFromId]?.requests?.Remove(request);
+
+                _logger.LogInformation($"[Digicore/Teleport/Accept] From: \"{ userFrom.DisplayName }\", To: \"{ target.DisplayName }\"");
             }
 
             return Task.CompletedTask;
@@ -122,8 +115,32 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             UnturnedUser? userTo
         )
         {
-            if (userFrom is null || userTo is null) return Task.CompletedTask;
-            // IF PLAYER IS NULL THEN DENY THE LAST TELEPORT REQUEST
+            if (userFrom is null) return Task.CompletedTask;
+
+            var userFromId = userFrom.SteamId.ToString();
+
+            ITeleport.Player.Data? request = userTo is not null ?
+                GetRequest(
+                    userFrom,
+                    userTo,
+                    _ledger[userFromId].requests
+                ) :
+                GetRequestLatest(
+                    userFrom,
+                    _ledger[userFromId].requests
+                );
+
+            if(request is null) return Task.CompletedTask;
+
+            var user = request.user;
+
+            _ledger[userFromId]?.requests?.Remove(request);
+
+            /*
+            _ledger[userFromId]?.pending?.Remove(request);
+            */
+
+            _logger.LogInformation($"[Digicore/Teleport/Deny] From: \"{ userFrom.DisplayName }\", To: \"{ user?.DisplayName }\"");
 
             return Task.CompletedTask;
         }
@@ -133,71 +150,86 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             UnturnedUser? userTo
         )
         {
-            if (userFrom is null || userTo is null) return Task.CompletedTask;
-            // IF PLAYER IS NULL THEN CANCEL THE LAST TELEPORT REQUEST
+            if (userFrom is null) return Task.CompletedTask;
+
+            var userFromId = userFrom.SteamId.ToString();
+
+            ITeleport.Player.Data? request = userTo is not null ?
+                GetRequest(
+                    userFrom,
+                    userTo,
+                    _ledger[userFromId].pending
+                ) :
+                GetRequestLatest(
+                    userFrom,
+                    _ledger[userFromId].pending
+                );
+
+            if(request is null) return Task.CompletedTask;
+            if(request.user is null) return Task.CompletedTask;
+
+            var requestUser = request.user;
+            var requestUserId = request.user.SteamId.ToString();
+
+            _ledger[requestUserId]?.requests?.Remove(request);
+            _ledger[userFromId]?.pending?.Remove(request);
+
+            _logger.LogInformation($"[Digicore/Teleport/Cancel] From: \"{ userFrom.DisplayName }\", To: \"{ requestUser?.DisplayName }\"");
 
             return Task.CompletedTask;
         }
 
         public async Task Request(
-            UnturnedUser? userFrom,
-            UnturnedUser? userTo
+            UnturnedUser userFrom,
+            UnturnedUser userTo
         )
         {
-            // Request requires a user to teleport to.
-            if (
-                userTo is not null &&
-                userFrom is not null
-            ) {
-                var data = new ITeleport.Player.Data()
-                {
-                    user = userFrom,
-                    timestamp = DateTime.UtcNow
-                };
+            var data = new ITeleport.Player.Data()
+            {
+                userFrom = userFrom,
+                userTo = userTo,
+                timestamp = DateTime.UtcNow
+            };
 
-                var userToId = userTo.SteamId.ToString();
-                var userFromId = userFrom.SteamId.ToString();
+            var userToId = userTo?.SteamId.ToString();
+            var userFromId = userFrom?.SteamId.ToString();
 
-                _logger.LogInformation($"[Digicore/Teleport/Ledger] Request made for { userTo.DisplayName }");
+            if(
+                userFromId is null ||
+                userToId is null
+            ) return;
 
-                // Prevent teleport to self.
-                if(userToId == userFromId) {
-                    await userFrom.PrintMessageAsync("[Digicore.Teleport] Teleporting to yourself doesn't make much sense.");
+            // Prevent teleport to self.
+            if(userToId == userFromId) return;
 
-                    return;
-                }
+            var player = _ledger[userToId];
+            var requests = player.requests;
 
-                var player = _ledger[userToId];
-                var requests = player.requests;
+            if(requests is null) return;
 
-                if(requests is not null) {
-                    _logger.LogInformation($"[Digicore/Teleport/Ledger] requests: { requests.Count }");
-                    
-                    bool duplicate = false;
+            bool duplicate = false;
 
-                    // Let's prevent duplicate of the same teleport requests from being stored.
-                    foreach(var request in requests) {
-                        if (
-                            request.user is not null &&
-                            data.user is not null &&
-                            request.user.SteamId == data.user.SteamId
-                        ) duplicate = true;
-                    }
+            // Let's prevent duplicate of the same teleport requests from being stored.
+            foreach(var request in requests) {
+                if (
+                    request?.userFrom is not null &&
+                    data?.userFrom is not null &&
+                    request?.userFrom?.SteamId == data?.userFrom?.SteamId &&
+                    request?.userTo?.SteamId == data?.userTo?.SteamId
+                ) duplicate = true;
+            }
 
-                    _logger.LogInformation($"[Digicore/Teleport/Ledger] duplicate: { duplicate }");
+            //An existing teleport request does not exist.
+            if (duplicate) return;
 
-                    //An existing teleport request does not exist.
-                    if (duplicate == false) {
-                        _ledger[userToId]?.requests?.Add(data);
+            _ledger[userToId]?.requests?.Add(data);
+            _ledger[userFromId]?.pending?.Add(data);
 
-                        await userFrom.PrintMessageAsync($"[Digicore.Teleport] Teleport request sent to {userTo.DisplayName}.");
+            if(userFrom is not null && userTo is not null) {
+                await userFrom.PrintMessageAsync($"[Digicore/Teleport] Teleport request sent to { userTo.DisplayName }.");
+                await userTo.PrintMessageAsync($"[Digicore/Teleport] Teleport requested by { userFrom.DisplayName }.");
 
-                        await userTo.PrintMessageAsync($"[Digicore.Teleport] Teleport requested by {userFrom.DisplayName}.");
-                        await userTo.PrintMessageAsync("[Digicore.Teleport] tp (accept|deny)");
-
-                        _logger.LogInformation($"[Digicore/Teleport/Ledger] Request Count: {requests.Count}");
-                    }
-                }
+                _logger.LogInformation($"[Digicore/Teleport/Request] From: \"{ userFrom.DisplayName }\", To: \"{ userTo.DisplayName }\"");
             }
         }
 
@@ -209,10 +241,11 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
 
             player.requests = new List<ITeleport.Player.Data>();
             player.matches = new List<UnturnedUser>();
+            player.pending = new List<ITeleport.Player.Data>();
 
             _ledger.Add(id, player);
 
-            _logger.LogInformation($"[Digicore/Teleport/Ledger] ADDED: {id}");
+            _logger.LogInformation($"[Digicore/Teleport/Ledger/Add] {id}");
 
             return Task.CompletedTask;
         }
@@ -223,7 +256,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
         {
             _ledger.Remove(id);
 
-            _logger.LogInformation($"[Digicore/Teleport/Ledger] REMOVED: {id}");
+            _logger.LogInformation($"[Digicore/Teleport/Ledger/Remove] {id}");
 
             return Task.CompletedTask;
         }
@@ -243,6 +276,16 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             _ledger[id].matches = new List<UnturnedUser>();
 
             return Task.CompletedTask;
+        }
+ 
+        public List<UnturnedUser>? GetMatches(
+            string id
+        ) {
+            var entry = _ledger[id];
+
+            if(entry is not null) return entry.matches;
+
+            return null;
         }
     }
 }

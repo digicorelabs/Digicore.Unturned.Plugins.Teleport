@@ -55,11 +55,11 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 var index = 1;
                 var userFromId = userFrom.SteamId.ToString();
 
-                await userFrom.PrintMessageAsync("[Digicore.Teleport] Multiple matches found, please select from the following.");
+                await userFrom.PrintMessageAsync("[Digicore/Teleport] Multiple matches found, please select from the following. (tp <match number>)");
 
                 foreach (var match in matches)
                 {
-                    await userFrom.PrintMessageAsync($"[Digicore.Teleport] { index }) { match.DisplayName.ToString() }.");
+                    await userFrom.PrintMessageAsync($"{ index }) { match.DisplayName.ToString() }.");
                     await _teleport.MatchAdd(userFromId, match);
 
                     index++;
@@ -91,154 +91,246 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             return await GetMatchFromMatches(matches, userFrom);
         }
 
-        /*
-        private UnturnedUser? FindPlayerByPlayerName(
-            string? playerName
-        )
-        {
-            if(playerName == null) return null;
-
-            UnturnedUser? match = null;
-
-            List<UnturnedUser> matches = new List<UnturnedUser>();
-
-            var nameToMatchOn = playerName.ToLower();
-            var users = _unturnedUserDirectory.GetOnlineUsers();
-
-            foreach (var user in users)
-            {
-                var username = user.DisplayName.ToLower();
-
-                if(username == nameToMatchOn) match = user;
-                if(username.Contains(nameToMatchOn)) matches.Add(user);
-            }
-
-            if(match != null) return match;
-
-            if(matches.Count == 1) {
-                // Did you mean this one match?
-                return matches[0];
-            } else if(matches.Count > 1) {
-                // HandleMatches(matches);
-            }
-
-            return null;
-        }
-        */
-
-        private bool IsActionAccept(string action)
+        private bool IsActionAccept(string? action)
         {
             return action == ACTION_ACCEPT || action == ACTION_SHORTCUT_ACCEPT;
         }
 
-        private bool IsActionDeny(string action)
+        private bool IsActionDeny(string? action)
         {
             return action == ACTION_DENY || action == ACTION_SHORTCUT_DENY;
         }
 
-        private bool IsActionCancel(string action)
+        private bool IsActionCancel(string? action)
         {
             return action == ACTION_CANCEL || action == ACTION_SHORTCUT_CANCEL;
         }
 
-        private bool IsAnAction(string action)
-        {
-            return IsActionAccept(action) || IsActionDeny(action) || IsActionCancel(action);
-        }
-
         private string PrintCommandStructure()
         {
-            return "[Digicore.Teleport] tp (player|accept|deny|cancel)";
+            return "[Digicore/Teleport] tp (player|accept|deny|cancel)";
         }
 
-        protected async override UniTask OnExecuteAsync()
+        private async Task HandleAction(
+            string? firstParameter,
+            string? secondParameter,
+            UnturnedUser? userFrom
+        ) {
+            /**
+            * Optional second parameter can be a player.
+            * If the second parameter is a player, then the action corresponds to target player.
+            **/
+
+            if(
+                firstParameter is null ||
+                userFrom is null
+            ) return;
+
+            UnturnedUser? userBySecondParameter = FindPlayerByPlayerName(
+                secondParameter,
+                userFrom
+            ).Result;
+
+            // In case a player is searched for, but does not exist.
+            if(
+                secondParameter?.Length > 0 &&
+                userBySecondParameter is null
+            ) {
+                _logger.LogInformation($"[Digicore] Player \"{ secondParameter }\" not found.");
+
+                return;
+            }
+
+            // Either no player's name is passed as a parameter or it was and the the player's information was found and is being passed on.
+            if(IsActionAccept(firstParameter)) {
+                await _teleport.Accept(
+                    userFrom,
+                    userBySecondParameter
+                );
+
+                return;
+            }
+
+            if(IsActionDeny(firstParameter)) {
+                await _teleport.Deny(
+                    userFrom,
+                    userBySecondParameter
+                );
+
+                return;
+            }
+
+            // TODO: FINISH.
+            if(IsActionCancel(firstParameter)) {
+                await _teleport.Cancel(
+                    userFrom,
+                    userBySecondParameter
+                );
+
+                return;
+            }
+        }
+
+        private bool isRequestToAMatch(
+            int? firstParameter,
+            UnturnedUser? userFrom
+        ) {
+            try
+            {
+                var id = userFrom?.SteamId.ToString();
+
+                if(id is null) return false;
+
+                var matches = _teleport.GetMatches(id);
+
+                if(
+                    firstParameter is not null &&
+                    matches is not null &&
+                    matches.Count > 0
+                ) return true;
+            }
+            catch (System.Exception)
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        private async Task HandleMatchRequest(
+            int selection,
+            UnturnedUser? userFrom
+        ) {
+            if(selection <= 0) return;
+
+            var id = userFrom?.SteamId.ToString();
+
+            if(id is null) return;
+
+            var index = selection - 1;
+            var matches = _teleport.GetMatches(id);
+
+            if(matches is null) return;
+
+            var match = matches[index];
+
+            if(match is null) return;
+
+            await _teleport.Request(
+                userFrom,
+                match
+            );
+
+            await _teleport.MatchRemove(id);
+        }
+
+        private async Task<string?> GetParameterAsString(
+            OpenMod.API.Commands.ICommandContext Context,
+            int index
+        ) {
+            try
+            {
+                return await Context.Parameters.GetAsync<string>(index);
+            }
+            catch (System.Exception)
+            {
+                return null;
+            }
+        }
+
+        private async Task<int> GetParameterAsInt(
+            OpenMod.API.Commands.ICommandContext Context,
+            int index
+        ) {
+            try
+            {
+                return await Context.Parameters.GetAsync<int>(index);
+            }
+            catch (System.Exception)
+            {
+                return -1;
+            }
+        }
+
+        protected override async UniTask OnExecuteAsync()
         {
-            if(Context.Parameters.Length < 1 || Context.Parameters.Length > 2) await Context.Actor.PrintMessageAsync(PrintCommandStructure());
+            var countOfParameters = Context.Parameters.Length;
 
-            // Flow: Match check.
+            if(
+                countOfParameters < 1 ||
+                countOfParameters > 2
+            ) {
+                await Context.Actor.PrintMessageAsync(PrintCommandStructure());
 
-            // TODO: Check for if player is TPing to a match first.
-            // var isRequestToTeleportToMatch = _teleport.GetMatches;
-            // await HandleMatches();
+                return;
+            }
 
-            // if(isRequestToTeleportToMatch) return null;
-
-            // Flow: Normal operation.
-
-            var firstParameter = await Context.Parameters.GetAsync<string>(0);
+            //Flow: It's an action of accept, deny, or cancel.
+            var firstParameterAsString = GetParameterAsString(
+                Context,
+                0
+            ).Result;
 
             UnturnedUser? userFrom = _unturnedUserDirectory.FindUser(
                 Context.Actor.Id, UserSearchMode.FindById
             );
 
-            if(userFrom is null) return null;
+            if(userFrom is null) return;
 
+            if(
+                IsActionAccept(firstParameterAsString) ||
+                IsActionDeny(firstParameterAsString) ||
+                IsActionCancel(firstParameterAsString)
+            ) {
+                var secondParameter = countOfParameters > 1 ? GetParameterAsString(
+                    Context,
+                    1
+                ).Result : null;
+
+                await HandleAction(firstParameterAsString, secondParameter, userFrom);
+
+                return;
+            }
+
+            //Flow: It's a match request.
+            var firstParameterAsInt = GetParameterAsInt(
+                Context,
+                0
+            ).Result;
+
+            if(
+                isRequestToAMatch(
+                    firstParameterAsInt,
+                    userFrom
+                )
+            ) {
+                if(firstParameterAsInt < 0) return;
+
+                await HandleMatchRequest(
+                    firstParameterAsInt,
+                    userFrom
+                );
+
+                return;
+            } 
+
+            //Flow: It's a request.
             UnturnedUser? userByFirstParameter = FindPlayerByPlayerName(
-                firstParameter,
+                firstParameterAsString,
                 userFrom
             ).Result;
 
-            // Check if the first parameter is a player.
-            if(userByFirstParameter != null) {
+            if(userByFirstParameter is not null) {
                 await _teleport.Request(
                     userFrom,
                     userByFirstParameter
                 );
 
-                return null;
+                return;
             }
 
-            // First parameter is not a player, maybe a command?
-            if(IsAnAction(firstParameter)) {
-                /**
-                * Optional second parameter can be a player.
-                * If the second parameter is a player, then the action correspond to target player.
-                **/
-
-                var secondParameter = Context.Parameters.Length > 1 ? await Context.Parameters.GetAsync<string>(1) : null;
-
-                UnturnedUser? userBySecondParameter = FindPlayerByPlayerName(
-                    secondParameter,
-                    userFrom
-                ).Result;
-
-                if(
-                    Context.Parameters.Length > 1 &&
-                    userBySecondParameter is null
-                ) {
-                    // In case the player searched for does not exist.
-
-                    _logger.LogInformation($"[Digicore] Player \"{ secondParameter }\" not found.");
-
-                    return null;
-                } 
-                // Either no player's name is passed as a parameter or it was and the the player's information was found and is being passed on.
-
-                if(IsActionAccept(firstParameter)) {
-                    await _teleport.Accept(
-                        userFrom,
-                        userBySecondParameter
-                    );
-                } else if(IsActionDeny(firstParameter)) {
-                    // TODO: FINISH.
-                    await _teleport.Deny(
-                        userFrom,
-                        userBySecondParameter
-                    );
-                } else if(IsActionCancel(firstParameter)) {
-                    // TODO: FINISH.
-                    await _teleport.Cancel(
-                        userFrom,
-                        userBySecondParameter
-                    );
-                }
-
-                return null;
-            }
-
+            //Flow: Other flow paths were unreachable.
             await Context.Actor.PrintMessageAsync(PrintCommandStructure());
-
-            return null;
         }
     }
 }

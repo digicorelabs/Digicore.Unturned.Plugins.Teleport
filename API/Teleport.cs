@@ -10,23 +10,23 @@ namespace Digicore.Unturned.Plugins.Teleport.API
     public interface ITeleport
     {
         Task Accept(
-            UnturnedUser? userFrom,
+            UnturnedUser userFrom,
             UnturnedUser? userTo
         );
 
         Task Deny(
-            UnturnedUser? userFrom,
+            UnturnedUser userFrom,
             UnturnedUser? userTo
         );
 
         Task Cancel(
-            UnturnedUser? userFrom,
+            UnturnedUser userFrom,
             UnturnedUser? userTo
         );
 
         Task Request(
-            UnturnedUser? userFrom,
-            UnturnedUser? userTo
+            UnturnedUser userFrom,
+            UnturnedUser userTo
         );
 
         Task LedgerAdd(
@@ -46,14 +46,20 @@ namespace Digicore.Unturned.Plugins.Teleport.API
             string id
         );
 
+        List<UnturnedUser>? GetMatches(
+            string id
+        );
+
         class Player
         {
             public List<ITeleport.Player.Data>? requests;
             public List<UnturnedUser>? matches;
+            public List<ITeleport.Player.Data>? pending;
 
             public class Data
             {
-                public UnturnedUser? user { get; set; }
+                public UnturnedUser? userFrom { get; set; }
+                public UnturnedUser? userTo { get; set; }
                 public DateTime timestamp { get; set; }
             }
         }
