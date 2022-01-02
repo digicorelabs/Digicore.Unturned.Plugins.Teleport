@@ -110,7 +110,6 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
             if (request.userFrom is not null) _ledger[request.userFrom.SteamId.ToString()]?.pending?.Remove(request);
         }
 
-
         public void LedgerAdd(
             string id
         )
@@ -203,7 +202,6 @@ namespace Digicore.Unturned.Plugins.Teleport.Services
                 onSuccess
             );
         }
-
         public void Cancel(
             UnturnedUser userWhoCanceled,
             UnturnedUser? userToCancel

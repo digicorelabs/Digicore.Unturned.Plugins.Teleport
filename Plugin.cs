@@ -26,7 +26,7 @@ namespace Digicore.Unturned.Plugins.Teleport
 
         protected override UniTask OnLoadAsync()
         {
-            _logger.LogInformation("[Digicore.Unturned.Plugins.Teleport] MESSAGE: TPA has loaded.");
+            _logger.LogInformation("[Digicore/Teleport] Plugin has loaded.");
 
             return UniTask.CompletedTask;
         }

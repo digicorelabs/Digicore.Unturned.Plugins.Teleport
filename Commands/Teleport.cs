@@ -38,7 +38,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             IServiceProvider serviceProvider,
             ITeleport teleport,
             IUnturnedUserDirectory unturnedUserDirectory
-        ) : base(serviceProvider) {
+        ) : base(serviceProvider)
+        {
             _unturnedUserDirectory = unturnedUserDirectory;
             _logger = logger;
             _teleport = teleport;
@@ -49,9 +50,10 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             UnturnedUser userFrom
         )
         {
-            if(matches.Count == 1) return matches[0];
+            if (matches.Count == 1) return matches[0];
 
-            if(matches.Count > 1) {
+            if (matches.Count > 1)
+            {
                 var index = 1;
                 var userFromId = userFrom.SteamId.ToString();
 
@@ -75,7 +77,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             UnturnedUser userFrom
         )
         {
-            if(playerName == null) return null;
+            if (playerName == null) return null;
 
             List<UnturnedUser> matches = new List<UnturnedUser>();
 
@@ -86,7 +88,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             {
                 var username = user.DisplayName.ToLower();
 
-                if(username.Contains(nameToMatchOn)) matches.Add(user);
+                if (username.Contains(nameToMatchOn)) matches.Add(user);
             }
 
             return await GetMatchFromMatches(matches, userFrom);
@@ -112,17 +114,18 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             return "[Digicore/Teleport] tp (player|accept|deny|cancel)";
         }
 
-        private async Task HandleAction(
+        private void HandleAction(
             string? firstParameter,
             string? secondParameter,
             UnturnedUser? userFrom
-        ) {
+        )
+        {
             /**
             * Optional second parameter can be a player.
             * If the second parameter is a player, then the action corresponds to target player.
             **/
 
-            if(
+            if (
                 firstParameter is null ||
                 userFrom is null
             ) return;
@@ -133,17 +136,19 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
             ).Result;
 
             // In case a player is searched for, but does not exist.
-            if(
+            if (
                 secondParameter?.Length > 0 &&
                 userBySecondParameter is null
-            ) {
+            )
+            {
                 _logger.LogInformation($"[Digicore] Player \"{ secondParameter }\" not found.");
 
                 return;
             }
 
             // Either no player's name is passed as a parameter or it was and the the player's information was found and is being passed on.
-            if(IsActionAccept(firstParameter)) {
+            if (IsActionAccept(firstParameter))
+            {
                 _teleport.Accept(
                     userFrom,
                     userBySecondParameter
@@ -152,7 +157,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 return;
             }
 
-            if(IsActionDeny(firstParameter)) {
+            if (IsActionDeny(firstParameter))
+            {
                 _teleport.Deny(
                     userFrom,
                     userBySecondParameter
@@ -161,7 +167,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 return;
             }
 
-            if(IsActionCancel(firstParameter)) {
+            if (IsActionCancel(firstParameter))
+            {
                 _teleport.Cancel(
                     userFrom,
                     userBySecondParameter
@@ -174,16 +181,17 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private bool isRequestToAMatch(
             int? firstParameter,
             UnturnedUser? userFrom
-        ) {
+        )
+        {
             try
             {
                 var id = userFrom?.SteamId.ToString();
 
-                if(id is null) return false;
+                if (id is null) return false;
 
                 var matches = _teleport.GetMatches(id);
 
-                if(
+                if (
                     firstParameter is not null &&
                     matches is not null &&
                     matches.Count > 0
@@ -200,19 +208,20 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private async Task HandleMatchRequest(
             int selection,
             UnturnedUser userFrom
-        ) {
-            if(userFrom is null) return;
-            if(selection <= 0) return;
+        )
+        {
+            if (userFrom is null) return;
+            if (selection <= 0) return;
 
             var id = userFrom.SteamId.ToString();
             var index = selection - 1;
             var matches = _teleport.GetMatches(id);
 
-            if(matches is null) return;
+            if (matches is null) return;
 
             var match = matches[index];
 
-            if(match is null) return;
+            if (match is null) return;
 
             await _teleport.Request(
                 userFrom,
@@ -225,7 +234,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private async Task<string?> GetParameterAsString(
             OpenMod.API.Commands.ICommandContext Context,
             int index
-        ) {
+        )
+        {
             try
             {
                 return await Context.Parameters.GetAsync<string>(index);
@@ -239,7 +249,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private async Task<int> GetParameterAsInt(
             OpenMod.API.Commands.ICommandContext Context,
             int index
-        ) {
+        )
+        {
             try
             {
                 return await Context.Parameters.GetAsync<int>(index);
@@ -254,10 +265,11 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         {
             var countOfParameters = Context.Parameters.Length;
 
-            if(
+            if (
                 countOfParameters < 1 ||
                 countOfParameters > 2
-            ) {
+            )
+            {
                 await Context.Actor.PrintMessageAsync(PrintCommandStructure());
 
                 return;
@@ -273,19 +285,20 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 Context.Actor.Id, UserSearchMode.FindById
             );
 
-            if(userFrom is null) return;
+            if (userFrom is null) return;
 
-            if(
+            if (
                 IsActionAccept(firstParameterAsString) ||
                 IsActionDeny(firstParameterAsString) ||
                 IsActionCancel(firstParameterAsString)
-            ) {
+            )
+            {
                 var secondParameter = countOfParameters > 1 ? GetParameterAsString(
                     Context,
                     1
                 ).Result : null;
 
-                await HandleAction(firstParameterAsString, secondParameter, userFrom);
+                HandleAction(firstParameterAsString, secondParameter, userFrom);
 
                 return;
             }
@@ -296,13 +309,14 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 0
             ).Result;
 
-            if(
+            if (
                 isRequestToAMatch(
                     firstParameterAsInt,
                     userFrom
                 )
-            ) {
-                if(firstParameterAsInt < 0) return;
+            )
+            {
+                if (firstParameterAsInt < 0) return;
 
                 await HandleMatchRequest(
                     firstParameterAsInt,
@@ -310,7 +324,7 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 );
 
                 return;
-            } 
+            }
 
             //Flow: It's a request.
             UnturnedUser? userByFirstParameter = FindPlayerByPlayerName(
@@ -318,7 +332,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 userFrom
             ).Result;
 
-            if(userByFirstParameter is not null) {
+            if (userByFirstParameter is not null)
+            {
                 await _teleport.Request(
                     userFrom,
                     userByFirstParameter
