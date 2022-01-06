@@ -45,6 +45,10 @@ namespace Digicore.Unturned.Plugins.Teleport.API
             UnturnedUser? userTo
         );
 
+        Task List(
+            UnturnedUser user
+        );
+
         Task Request(
             UnturnedUser userFrom,
             UnturnedUser userTo

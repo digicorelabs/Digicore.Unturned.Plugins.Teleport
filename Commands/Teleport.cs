@@ -25,6 +25,8 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private string ACTION_SHORTCUT_DENY = "a";
         private string ACTION_CANCEL = "cancel";
         private string ACTION_SHORTCUT_CANCEL = "c";
+        private string ACTION_LIST = "list";
+        private string ACTION_SHORTCUT_LIST = "l";
 
         public Command(
             ILogger<Command> logger,
@@ -47,18 +49,18 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
 
             if (matches.Count > 1)
             {
-                var index = 1;
+                var number = 1;
                 var userFromId = userFrom.SteamId.ToString();
 
                 await userFrom.PrintMessageAsync("[Digicore/Teleport] Multiple matches found, please select from the following. (tp <match number>)");
 
                 foreach (var match in matches)
                 {
-                    await userFrom.PrintMessageAsync($"{ index }) { match.DisplayName.ToString() }.");
+                    await userFrom.PrintMessageAsync($"{ number }) { match.DisplayName } ({ match.SteamId.ToString() }).");
 
                     _teleport.MatchAdd(userFromId, match);
 
-                    index++;
+                    number++;
                 }
             }
 
@@ -100,6 +102,11 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
         private bool IsActionCancel(string? action)
         {
             return action == ACTION_CANCEL || action == ACTION_SHORTCUT_CANCEL;
+        }
+
+        private bool IsActionList(string? action)
+        {
+            return action == ACTION_LIST || action == ACTION_SHORTCUT_LIST;
         }
 
         private string PrintCommandStructure()
@@ -165,6 +172,15 @@ namespace Digicore.Unturned.Plugins.Teleport.Commands
                 _teleport.Cancel(
                     userFrom,
                     userBySecondParameter
+                );
+
+                return;
+            }
+
+            if (IsActionList(firstParameter))
+            {
+                _teleport.List(
+                    userFrom
                 );
 
                 return;
